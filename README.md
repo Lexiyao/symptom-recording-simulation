@@ -25,6 +25,12 @@ one fitted on `S` is produced entirely by the recording process. Two coding
 regimes are contrasted: an alarm symptom coded 85% of the time when present
 (rectal bleeding), and a vague symptom coded 45% of the time (fatigue).
 
+The coding intercept is solved numerically at each grid point so that the
+*marginal* coding rate stays fixed as `mnar_strength` rises. This matters: since
+`plogis(a + m*U)` does not average to `plogis(a)` once `m > 0`, setting the
+intercept naively would let coding frequency drift along the x-axis, confounding
+the two mechanisms the simulation exists to separate.
+
 ## Reproducing
 
 Base R only, no packages required for the simulation (`ggplot2` for the plots).
@@ -38,8 +44,9 @@ vague <- run_sweep(base_coding_prob = 0.45, nsim = 200)
 `run_sweep()` returns Monte Carlo standard errors alongside every estimate, so
 you can see whether `nsim` is adequate rather than taking it on trust.
 `figures/sweep_results.csv` is the output of the exact call above with
-`seed = 20260726`. `tests/test_simulation.R` checks the invariants that make the
-result interpretable.
+`seed = 20260726`. `tests/test_simulation.R` checks the thirteen invariants that make the
+result interpretable, including that coding frequency stays fixed along the
+sweep.
 
 ## Results
 
@@ -58,8 +65,8 @@ missingness required.
 
 The two mechanisms turn out to be comparable in size rather than one dominating.
 The gap between regimes at `mnar_strength = 0` is 1.92 OR units; sweeping
-`mnar_strength` from 0 to 2 moves the vague regime by 2.51 units and the alarm
-regime by 1.06. So coding frequency sets where the estimate starts, and
+`mnar_strength` from 0 to 2 moves the vague regime by 2.46 units and the alarm
+regime by 1.21. So coding frequency sets where the estimate starts, and
 informativeness determines how far it then travels — travelling furthest exactly
 where coding is sparsest.
 
@@ -74,15 +81,15 @@ zero in the structured field.
 **2. Increasing MNAR strength moves the odds ratio back *toward* the declared
 truth.** As coding concentrates among patients whose severity is high, being
 coded becomes a sharper marker of genuine disease, so the estimated association
-strengthens — 7.42 to 9.93 in the vague regime. Informative recording does not
+strengthens — 7.42 to 9.87 in the vague regime, with coding frequency held fixed. Informative recording does not
 simply make the bias worse; it changes what the coded variable means. Recovering
 the odds ratio is not the same as recovering usable predictions, though: the
 second figure shows calibration for truly symptomatic patients stays poor
 throughout.
 
 **3. Under-prediction for truly symptomatic patients persists across the whole
-range.** Observed risk exceeds predicted risk by 57–91% in the vague regime and
-by about 15% in the alarm regime, at every MNAR level tested. The
+range.** Observed risk exceeds predicted risk by 61–91% in the vague regime and
+by 9–15% in the alarm regime, at every MNAR level tested. The
 observed/expected ratio never approaches 1. This is the quantity with clinical
 consequences, and it is worst exactly where coding is weakest.
 

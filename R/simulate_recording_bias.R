@@ -20,7 +20,12 @@
 #'   symptoms (e.g. rectal bleeding in colorectal cancer) so that attenuation
 #'   is visible on the plot. exp(2.34) ~ 10.4. Vary it via this argument;
 #'   nothing downstream depends on the specific value.
-#' @param base_coding_prob P(coded | symptom present) when mnar_strength = 0.
+#' @param base_coding_prob target P(coded | symptom present), held FIXED across
+#'   the whole mnar_strength sweep by solving for the intercept (see
+#'   solve_coding_intercept). Without that solve, raising mnar_strength would
+#'   also shift the marginal coding rate, and the two mechanisms this simulation
+#'   is meant to separate -- how OFTEN symptoms are coded, and how INFORMATIVE
+#'   the coding is -- would be confounded along the x-axis.
 #'   Two regimes: an alarm symptom that is reliably coded, and a vague symptom
 #'   (fatigue, abdominal discomfort) that often is not.
 #' @param mnar_strength dependence of coding on unobserved severity, on the
@@ -51,13 +56,27 @@ sim_params <- function(n = 20000,
 #' Y does not depend on R. Any association between the observed code and Y
 #' beyond the causal path therefore comes from the recording process, which is
 #' the whole point of the exercise.
+#' Intercept that holds the marginal coding rate at `target` for a given
+#' mnar_strength, assuming U ~ N(0, 1). E[plogis(a + m*U)] is not plogis(a)
+#' once m > 0, so the intercept has to be solved for rather than set to
+#' qlogis(target). Returns qlogis(target) exactly when m = 0.
+solve_coding_intercept <- function(target, mnar_strength, n_quad = 4001) {
+  if (mnar_strength == 0) return(qlogis(target))
+  u <- seq(-6, 6, length.out = n_quad)
+  w <- dnorm(u); w <- w / sum(w)
+  f <- function(a) sum(w * plogis(a + mnar_strength * u)) - target
+  stats::uniroot(f, interval = c(-30, 30), tol = 1e-10)$root
+}
+
 simulate_cohort <- function(p) {
   age_z <- rnorm(p$n)
   S     <- rbinom(p$n, 1, p$prev_symptom)
   U     <- rnorm(p$n)                        # severity, observed by nobody
 
-  # coding depends on U only among those who have the symptom
-  coding_logit <- qlogis(p$base_coding_prob) + p$mnar_strength * U
+  # coding depends on U among those who have the symptom, with the intercept
+  # chosen so that the marginal coding rate stays at base_coding_prob
+  coding_logit <- solve_coding_intercept(p$base_coding_prob, p$mnar_strength) +
+                  p$mnar_strength * U
   R     <- rbinom(p$n, 1, plogis(coding_logit))
   S_obs <- as.integer(S & R)
 
