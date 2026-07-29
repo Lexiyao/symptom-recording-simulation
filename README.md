@@ -49,12 +49,19 @@ result interpretable.
 
 Three things come out of this, and the first was not what I expected.
 
-**1. The attenuation is driven by how *often* symptoms are coded, not by how
-*informative* the coding is.** At `mnar_strength = 0` — coding completely at
-random — the vague-symptom regime already returns an odds ratio of 7.4 against a
-declared true value of 10.4. The alarm regime returns 9.3. The gap between the
-two regimes at zero MNAR is larger than anything the MNAR parameter does
-afterwards.
+**1. Attenuation appears before recording is informative at all.** At
+`mnar_strength = 0` — coding completely at random — the vague-symptom regime
+already returns an odds ratio of 7.42 against a declared true value of 10.38, a
+29% attenuation. The alarm regime returns 9.34, a 10% attenuation. Coding a
+symptom less often biases the estimate downwards on its own, with no informative
+missingness required.
+
+The two mechanisms turn out to be comparable in size rather than one dominating.
+The gap between regimes at `mnar_strength = 0` is 1.92 OR units; sweeping
+`mnar_strength` from 0 to 2 moves the vague regime by 2.51 units and the alarm
+regime by 1.06. So coding frequency sets where the estimate starts, and
+informativeness determines how far it then travels — travelling furthest exactly
+where coding is sparsest.
 
 This matters for how the problem should be framed. It is a sensitivity problem:
 some truly present symptoms never become codes, specificity stays near one
@@ -64,11 +71,14 @@ a measurement-error problem, not a missing-data problem — there is no missing
 cell to impute, because an uncoded symptom and an absent symptom are the same
 zero in the structured field.
 
-**2. Increasing MNAR strength moves the odds ratio back *toward* the truth.**
-As coding concentrates among patients whose severity is high, being coded becomes
-a sharper marker of genuine disease, so the estimated association strengthens.
-Informative recording does not simply make the bias worse — it changes what the
-coded variable means.
+**2. Increasing MNAR strength moves the odds ratio back *toward* the declared
+truth.** As coding concentrates among patients whose severity is high, being
+coded becomes a sharper marker of genuine disease, so the estimated association
+strengthens — 7.42 to 9.93 in the vague regime. Informative recording does not
+simply make the bias worse; it changes what the coded variable means. Recovering
+the odds ratio is not the same as recovering usable predictions, though: the
+second figure shows calibration for truly symptomatic patients stays poor
+throughout.
 
 **3. Under-prediction for truly symptomatic patients persists across the whole
 range.** Observed risk exceeds predicted risk by 57–91% in the vague regime and
